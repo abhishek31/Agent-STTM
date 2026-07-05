@@ -56,9 +56,17 @@ def render_flow_diagram_png(graph: LineageGraph, direction: str = "source_to_tar
     dot.attr("node", shape="box", style="rounded,filled", fillcolor="#DCE6F1", color="#305496", fontname="Segoe UI", fontsize="10")
     dot.attr("edge", color="#305496", arrowsize="0.7", fontname="Segoe UI", fontsize="9")
 
-    for node in graph.nodes.values():
+    edges = graph.oriented_edges(direction)
+    # A flowchart should only show things that actually flow - nodes with no
+    # edges at all (e.g. a SOURCE/TARGET declared in the file but never wired
+    # into a mapping) are noise, not lineage, so they're left out here even
+    # though they may still exist in graph.nodes.
+    connected_ids = {e.source for e in edges} | {e.target for e in edges}
+
+    for node_id in connected_ids:
+        node = graph.nodes[node_id]
         dot.node(_safe_id(node.id), node.label)
-    for edge in graph.oriented_edges(direction):
+    for edge in edges:
         dot.edge(_safe_id(edge.source), _safe_id(edge.target))
 
     return dot.pipe(format="png")
