@@ -1,0 +1,29 @@
+[project]
+name = "lineage-mcp"
+version = "0.1.0"
+description = "MCP server that extracts source-to-target data lineage from SQL and XML (SSIS/Informatica/generic) files"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp>=1.2.0",
+    "sqlglot>=25.0.0",
+    "lxml>=5.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[project.scripts]
+lineage-mcp = "lineage_mcp.server:main"
+lineage-cli = "lineage_mcp.cli:main"
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

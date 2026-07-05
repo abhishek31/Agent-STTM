@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "lineage-mcp": {
+      "command": "C:\\Users\\abhis\\OneDrive\\Documents\\Agent-STTM\\.venv\\Scripts\\python.exe",
+      "args": ["-m", "lineage_mcp.server"],
+      "cwd": "C:\\Users\\abhis\\OneDrive\\Documents\\Agent-STTM"
+    }
+  }
+}
