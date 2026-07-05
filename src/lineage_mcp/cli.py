@@ -22,7 +22,7 @@ def main() -> None:
     parser.add_argument("--direction", choices=["source_to_target", "target_to_source"], default="source_to_target")
     parser.add_argument("--detail-level", choices=["table", "full"], default="table")
     parser.add_argument("--format", choices=["report", "mermaid", "json", "excel", "all"], default="report")
-    parser.add_argument("--output", "-o", help="Output .xlsx path when --format excel/all (default: <input file>_lineage.xlsx next to the input file)")
+    parser.add_argument("--output", "-o", help="Output .xlsx path when --format excel/all (default: output/<input file>_lineage.xlsx, created relative to the current directory)")
     parser.add_argument("--file-type", choices=["auto", "sql", "xml"], default="auto")
     parser.add_argument("--dialect", default="tsql", help="SQL dialect for sqlglot (tsql, snowflake, postgres, bigquery, mysql, ...)")
     parser.add_argument("--xml-format", choices=["auto", "ssis", "informatica", "generic"], default="auto")

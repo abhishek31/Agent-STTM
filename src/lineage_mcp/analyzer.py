@@ -87,7 +87,9 @@ def _default_excel_path(file_path: str | None) -> str:
     if not file_path:
         raise ValueError("excel_path must be provided when generating 'excel' output from inline content (no file_path to derive a name from)")
     src = Path(file_path)
-    return str(src.with_name(f"{src.stem}_lineage.xlsx"))
+    output_dir = Path.cwd() / "output"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    return str(output_dir / f"{src.stem}_lineage.xlsx")
 
 
 def _detect_file_type(file_path: str | None, content: str) -> str | None:

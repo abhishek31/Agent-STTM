@@ -51,8 +51,9 @@ def analyze_lineage(
         xml_format: "auto" (detect), "ssis", "informatica", or "generic" -
             force a specific XML parser instead of auto-detecting.
         excel_path: Where to write the .xlsx workbook when "excel" is in
-            output_formats. Defaults to "<file_path stem>_lineage.xlsx" next
-            to the input file; required if only `content` was provided.
+            output_formats. Defaults to "output/<file_path stem>_lineage.xlsx"
+            (created relative to the server's working directory); required
+            if only `content` was provided.
 
     Returns:
         A dict with: source_type, format_detected (for XML), direction,

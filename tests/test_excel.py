@@ -73,14 +73,17 @@ def test_excel_workbook_skips_diagram_sheet_gracefully_without_graphviz(monkeypa
     assert wb.sheetnames == ["Table Lineage", "Column Lineage"]
 
 
-def test_analyze_writes_excel_file(tmp_path):
-    src = tmp_path / "sample.sql"
+def test_analyze_writes_excel_file_to_output_dir_relative_to_cwd(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    src_dir = tmp_path / "input"
+    src_dir.mkdir()
+    src = src_dir / "sample.sql"
     src.write_text(_load("sample.sql"), encoding="utf-8")
 
     result = analyze(file_path=str(src), output_formats=["excel"])
     excel_path = Path(result["excel_path"])
+    assert excel_path == tmp_path / "output" / "sample_lineage.xlsx"
     assert excel_path.exists()
-    assert excel_path.name == "sample_lineage.xlsx"
 
     wb = openpyxl.load_workbook(excel_path)
     assert "Table Lineage" in wb.sheetnames

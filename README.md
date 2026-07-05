@@ -99,7 +99,7 @@ Desktop.
 | `output_formats` | all | subset of `["graph", "mermaid", "report", "excel"]`. |
 | `dialect` | `"tsql"` | sqlglot dialect (`snowflake`, `postgres`, `bigquery`, `mysql`, ...). |
 | `xml_format` | `"auto"` | `"auto"`, `"ssis"`, `"informatica"`, or `"generic"`. |
-| `excel_path` | - | Where to write the `.xlsx` when `"excel"` is requested. Defaults to `<file_path stem>_lineage.xlsx` next to the input file; required if only `content` was given. |
+| `excel_path` | - | Where to write the `.xlsx` when `"excel"` is requested. Defaults to `output/<file_path stem>_lineage.xlsx` (created relative to the current directory, kept separate from your input files); required if only `content` was given. |
 
 Returns `source_type`, `format_detected`, `direction`, `detail_level`,
 `errors` (non-fatal parse issues - e.g. one bad statement in an otherwise
@@ -154,6 +154,8 @@ src/lineage_mcp/
     generic.py           # heuristic source/target tag parser
   server.py            # FastMCP tool definitions / entrypoint
 tests/                  # pytest suite + fixtures for all three XML formats + SQL
+input/                  # drop your own .sql/.xml/.dtsx files here to analyze
+output/                 # generated reports/diagrams/workbooks land here by default
 ```
 
 ## Extending
