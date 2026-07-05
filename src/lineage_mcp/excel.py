@@ -1,6 +1,9 @@
 """Render a LineageGraph as a clean source-to-target mapping (STTM) workbook.
 
-Two sheets:
+Up to three sheets:
+  - "Flow Diagram": a rendered boxes-and-arrows flowchart image of the
+    table-level lineage (only added if Graphviz's `dot` executable is
+    available - see diagram.py).
   - "Table Lineage": one row per source-table -> target-table relationship.
   - "Column Lineage": one row per source-column -> target-column relationship
     (only added if the graph actually has column-level edges - e.g. SQL or
@@ -13,11 +16,15 @@ the underlying values are always the true source/target, never swapped.
 
 from __future__ import annotations
 
+import io
+
 from openpyxl import Workbook
+from openpyxl.drawing.image import Image
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.table import Table, TableStyleInfo
 
+from lineage_mcp.diagram import render_flow_diagram_png
 from lineage_mcp.graph import LineageGraph, NodeKind
 
 _HEADER_FILL = PatternFill(start_color="FF305496", end_color="FF305496", fill_type="solid")
@@ -28,10 +35,20 @@ def to_excel_workbook(full_graph: LineageGraph, direction: str = "source_to_targ
     if direction not in ("source_to_target", "target_to_source"):
         raise ValueError("direction must be 'source_to_target' or 'target_to_source'")
 
+    table_graph = full_graph.collapse_to_kind(NodeKind.TABLE)
+
     wb = Workbook()
-    table_sheet = wb.active
-    table_sheet.title = "Table Lineage"
-    _write_table_sheet(table_sheet, full_graph, direction)
+    diagram_png = render_flow_diagram_png(table_graph, direction=direction) if not table_graph.is_empty() else None
+    if diagram_png:
+        diagram_sheet = wb.active
+        diagram_sheet.title = "Flow Diagram"
+        _write_diagram_sheet(diagram_sheet, diagram_png)
+        table_sheet = wb.create_sheet("Table Lineage")
+    else:
+        table_sheet = wb.active
+        table_sheet.title = "Table Lineage"
+
+    _write_table_sheet(table_sheet, table_graph, direction)
 
     column_rows = _column_rows(full_graph)
     if column_rows:
@@ -41,8 +58,12 @@ def to_excel_workbook(full_graph: LineageGraph, direction: str = "source_to_targ
     return wb
 
 
-def _write_table_sheet(ws, full_graph: LineageGraph, direction: str) -> None:
-    table_graph = full_graph.collapse_to_kind(NodeKind.TABLE)
+def _write_diagram_sheet(ws, png_bytes: bytes) -> None:
+    ws.add_image(Image(io.BytesIO(png_bytes)), "A1")
+    ws.sheet_view.showGridLines = False
+
+
+def _write_table_sheet(ws, table_graph: LineageGraph, direction: str) -> None:
     first_header, second_header = ("Source Table", "Target Table") if direction == "source_to_target" else ("Target Table", "Source Table")
     headers = [first_header, second_header, "Detail"]
 

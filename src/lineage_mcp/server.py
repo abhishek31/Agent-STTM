@@ -59,7 +59,8 @@ def analyze_lineage(
         detail_level, errors (list of non-fatal parse issues), and any of
         graph (JSON nodes/edges), mermaid (flowchart text), report (markdown),
         excel_path (path to the written .xlsx workbook - a clean source-to-target
-        mapping with a Table Lineage sheet and, when available, a Column
+        mapping with a Flow Diagram sheet (rendered image, requires Graphviz's
+        `dot` on PATH), a Table Lineage sheet, and, when available, a Column
         Lineage sheet).
     """
     return analyze(

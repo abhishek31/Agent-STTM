@@ -3,11 +3,16 @@ from pathlib import Path
 import openpyxl
 import pytest
 
+from lineage_mcp import diagram
 from lineage_mcp.analyzer import analyze
 from lineage_mcp.excel import to_excel_workbook
 from lineage_mcp.sql.parser import parse_sql_lineage
 
 FIXTURES = Path(__file__).parent / "fixtures"
+
+
+def _expected_sheets(*rest: str) -> list[str]:
+    return (["Flow Diagram"] if diagram.is_available() else []) + list(rest)
 
 
 def _load(name: str) -> str:
@@ -17,7 +22,7 @@ def _load(name: str) -> str:
 def test_excel_workbook_has_table_and_column_sheets():
     result = parse_sql_lineage(_load("sample.sql"))
     wb = to_excel_workbook(result.graph, direction="source_to_target")
-    assert wb.sheetnames == ["Table Lineage", "Column Lineage"]
+    assert wb.sheetnames == _expected_sheets("Table Lineage", "Column Lineage")
 
     table_sheet = wb["Table Lineage"]
     assert [c.value for c in table_sheet[1]] == ["Source Table", "Target Table", "Detail"]
@@ -48,7 +53,24 @@ def test_excel_workbook_target_to_source_reorders_columns_not_values():
 def test_excel_workbook_skips_column_sheet_when_no_column_edges():
     result = parse_sql_lineage("MERGE INTO t.tgt USING t.src ON t.tgt.id = t.src.id WHEN MATCHED THEN UPDATE SET id = t.src.id;")
     wb = to_excel_workbook(result.graph)
-    assert wb.sheetnames == ["Table Lineage"]
+    assert wb.sheetnames == _expected_sheets("Table Lineage")
+
+
+def test_excel_workbook_embeds_diagram_image_when_graphviz_available():
+    if not diagram.is_available():
+        pytest.skip("Graphviz 'dot' executable not available in this environment")
+    result = parse_sql_lineage(_load("sample.sql"))
+    wb = to_excel_workbook(result.graph)
+    diagram_sheet = wb["Flow Diagram"]
+    assert len(diagram_sheet._images) == 1
+
+
+def test_excel_workbook_skips_diagram_sheet_gracefully_without_graphviz(monkeypatch):
+    monkeypatch.setattr("lineage_mcp.excel.render_flow_diagram_png", lambda *a, **k: None)
+    result = parse_sql_lineage(_load("sample.sql"))
+    wb = to_excel_workbook(result.graph)
+    assert "Flow Diagram" not in wb.sheetnames
+    assert wb.sheetnames == ["Table Lineage", "Column Lineage"]
 
 
 def test_analyze_writes_excel_file(tmp_path):

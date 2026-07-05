@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from lineage_mcp import diagram
 from lineage_mcp.excel import to_excel_workbook
 from lineage_mcp.graph import LineageGraph, NodeKind
 from lineage_mcp.render import to_mermaid, to_report
@@ -72,6 +73,8 @@ def analyze(
     if "report" in requested:
         response["report"] = to_report(display_graph, direction=direction)
     if "excel" in requested:
+        if not diagram.is_available():
+            errors.append("Graphviz 'dot' executable not found - the workbook was written without a Flow Diagram sheet (Table/Column Lineage sheets are unaffected). Install Graphviz and ensure 'dot' is on PATH to include it.")
         save_path = excel_path or _default_excel_path(file_path)
         workbook = to_excel_workbook(full_graph, direction=direction)
         workbook.save(save_path)

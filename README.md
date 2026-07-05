@@ -47,6 +47,11 @@ python -m venv .venv
 .venv\Scripts\pip install -e ".[dev]"
 ```
 
+Optional, only needed for the Excel "Flow Diagram" sheet: install
+[Graphviz](https://graphviz.org/download/) (e.g. `winget install Graphviz.Graphviz`
+on Windows) so its `dot` executable is available. Everything else works
+without it.
+
 Run the test suite:
 
 ```bash
@@ -104,19 +109,24 @@ the written workbook).
 
 ### Excel (STTM) output
 
-`excel` produces a clean source-to-target mapping workbook with up to two
+`excel` produces a clean source-to-target mapping workbook with up to three
 sheets, always collapsed past any intermediate CTE/transformation-instance
 hops regardless of `detail_level`:
 
+- **Flow Diagram** - a rendered boxes-and-arrows flowchart image of the
+  table-level lineage (via [Graphviz](https://graphviz.org/download/); needs
+  its `dot` executable installed and importable - if it's missing, this sheet
+  is skipped and a note is added to the response's `errors`, the other sheets
+  are unaffected).
 - **Table Lineage** - one row per physical source table -> target table.
 - **Column Lineage** - one row per physical source column -> target column
   (added only when the parser produced column-level detail - SQL and
   Informatica do; SSIS is component-level only, so it won't have this sheet).
 
-`direction` controls which side is presented in the leftmost columns
-(`source_to_target` puts Source first; `target_to_source` puts Target
-first) - the values themselves are always the true physical source/target,
-never swapped.
+`direction` controls which side is presented first - leftmost columns in the
+table/column sheets, left-to-right flow in the diagram (`source_to_target`
+puts Source first; `target_to_source` puts Target first) - the values
+themselves are always the true physical source/target, never swapped.
 
 From the CLI:
 ```bash
@@ -135,6 +145,7 @@ src/lineage_mcp/
   analyzer.py         # file-type detection + orchestration
   render.py           # Mermaid + markdown report rendering
   excel.py            # clean source-to-target mapping (.xlsx) rendering
+  diagram.py           # Graphviz PNG flowchart rendering (used by excel.py)
   sql/parser.py        # sqlglot-based SQL lineage extraction
   xml/
     detect.py          # SSIS vs Informatica vs generic sniffing
