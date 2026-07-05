@@ -99,15 +99,27 @@ class LineageGraph:
         return not self.edges
 
     def collapse_to_kind(self, kind: NodeKind) -> "LineageGraph":
+        """Collapse a multi-hop graph down to direct reachability edges between
+        nodes of the given kind (typically physical tables)."""
+        return self.collapse_to_boundary(lambda n: n.kind == kind)
+
+    def collapse_to_physical_columns(self) -> "LineageGraph":
+        """Collapse a multi-hop column graph (e.g. Informatica chains that pass
+        through transformation-instance columns) down to direct reachability
+        edges between physical-table columns only, skipping over intermediate
+        component/transformation column hops."""
+        return self.collapse_to_boundary(lambda n: n.kind == NodeKind.COLUMN and n.id.startswith("table:"))
+
+    def collapse_to_boundary(self, is_boundary) -> "LineageGraph":
         """Collapse a multi-hop graph (e.g. component/column chains from SSIS or
-        Informatica mappings) down to direct reachability edges between nodes of
-        the given kind (typically physical tables), skipping over intermediate
-        component/column hops. Includes transitive edges (A->B->C implies A->C)."""
+        Informatica mappings) down to direct reachability edges between nodes
+        matching `is_boundary`, skipping over intermediate hops. Includes
+        transitive edges (A->B->C implies A->C)."""
         adjacency: dict[str, list[str]] = {}
         for e in self.edges:
             adjacency.setdefault(e.source, []).append(e.target)
 
-        boundary_nodes = [n for n in self.nodes.values() if n.kind == kind]
+        boundary_nodes = [n for n in self.nodes.values() if is_boundary(n)]
         collapsed = LineageGraph()
         for n in boundary_nodes:
             collapsed.add_node(n.id, n.kind, n.label)
@@ -121,7 +133,7 @@ class LineageGraph:
                     continue
                 visited.add(cur)
                 node = self.nodes.get(cur)
-                if node and node.kind == kind and node.id != start.id:
+                if node and is_boundary(node) and node.id != start.id:
                     collapsed.add_edge(start.id, node.id, relation="flows_to")
                 stack.extend(adjacency.get(cur, []))
 

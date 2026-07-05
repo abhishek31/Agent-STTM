@@ -24,6 +24,7 @@ def analyze_lineage(
     output_formats: list[str] | None = None,
     dialect: str = "tsql",
     xml_format: str = "auto",
+    excel_path: str | None = None,
 ) -> dict:
     """Extract data lineage from a SQL script or an XML ETL package (SSIS/DTSX,
     Informatica PowerCenter mapping export, or a generic/custom XML schema).
@@ -35,21 +36,31 @@ def analyze_lineage(
             can read (e.g. content pasted by the user).
         file_type: "auto" (detect from extension/content), "sql", or "xml".
         direction: "source_to_target" (default) or "target_to_source" - which
-            way the returned edges/report/diagram read.
+            way the returned edges/report/diagram read, and (for "excel")
+            which entity - source or target - is presented in the leftmost
+            columns of each sheet.
         detail_level: "table" (default, collapses to physical table-to-table
             lineage) or "full" (keeps column-level and intermediate
             transformation/component nodes where the parser produced them).
-        output_formats: subset of ["graph", "mermaid", "report"] to include in
-            the response. Defaults to all three.
+            Does not affect "excel" output, which always includes both a
+            table-level sheet and a column-level sheet (when available).
+        output_formats: subset of ["graph", "mermaid", "report", "excel"] to
+            include in the response. Defaults to graph/mermaid/report.
         dialect: SQL dialect for sqlglot when file_type resolves to "sql"
             (e.g. "tsql", "snowflake", "postgres", "bigquery", "mysql").
         xml_format: "auto" (detect), "ssis", "informatica", or "generic" -
             force a specific XML parser instead of auto-detecting.
+        excel_path: Where to write the .xlsx workbook when "excel" is in
+            output_formats. Defaults to "<file_path stem>_lineage.xlsx" next
+            to the input file; required if only `content` was provided.
 
     Returns:
         A dict with: source_type, format_detected (for XML), direction,
         detail_level, errors (list of non-fatal parse issues), and any of
-        graph (JSON nodes/edges), mermaid (flowchart text), report (markdown).
+        graph (JSON nodes/edges), mermaid (flowchart text), report (markdown),
+        excel_path (path to the written .xlsx workbook - a clean source-to-target
+        mapping with a Table Lineage sheet and, when available, a Column
+        Lineage sheet).
     """
     return analyze(
         file_path=file_path,
@@ -60,6 +71,7 @@ def analyze_lineage(
         output_formats=output_formats,
         dialect=dialect,
         xml_format=xml_format,
+        excel_path=excel_path,
     )
 
 
@@ -79,6 +91,12 @@ def list_supported_formats() -> dict:
                 "generic": "Heuristic parser for custom XML using source/target-like tags (source, target, from, to, input, output, ...)",
             },
             "notes": "Format is auto-detected by default; pass xml_format explicitly to override.",
+        },
+        "output_formats": {
+            "graph": "JSON nodes/edges",
+            "mermaid": "flowchart text",
+            "report": "markdown table + summary",
+            "excel": "clean source-to-target mapping workbook (.xlsx) with a Table Lineage sheet and, when column-level data is available, a Column Lineage sheet",
         },
     }
 

@@ -227,6 +227,28 @@ def _alias_map(select_expr: exp.Select) -> dict[str, str]:
     return mapping
 
 
+def _value_columns(expr: exp.Expression) -> list[exp.Column]:
+    """Find Column refs that actually contribute to the produced value, skipping
+    WHERE/HAVING/JOIN-ON predicate columns of any nested subquery - those are
+    filter/correlation conditions, not data sources, so `find_all` (which walks
+    everything indiscriminately) over-reports lineage for correlated subqueries."""
+    if isinstance(expr, exp.Column):
+        return [expr]
+    if isinstance(expr, exp.Select):
+        cols: list[exp.Column] = []
+        for proj in expr.expressions:
+            cols.extend(_value_columns(proj))
+        return cols
+
+    cols = []
+    for child in expr.args.values():
+        children = child if isinstance(child, list) else [child]
+        for c in children:
+            if isinstance(c, exp.Expression):
+                cols.extend(_value_columns(c))
+    return cols
+
+
 def _extract_column_lineage(
     target_table: str,
     select_expr: exp.Select,
@@ -249,7 +271,7 @@ def _extract_column_lineage(
 
         target_col_id = f"table:{target_table}.{output_name}"
         found_any = False
-        for column in value_expr.find_all(exp.Column):
+        for column in _value_columns(value_expr):
             found_any = True
             _link_source_column(
                 column, alias_map, single_source, ctes, target_col_id, graph, seen
@@ -287,7 +309,7 @@ def _link_source_column(
                 value_expr = proj.this if isinstance(proj, exp.Alias) else proj
                 inner_alias_map = _alias_map(cte_select)
                 inner_single = next(iter(inner_alias_map.values())) if len(inner_alias_map) == 1 else None
-                for inner_col in value_expr.find_all(exp.Column):
+                for inner_col in _value_columns(value_expr):
                     _link_source_column(
                         inner_col, inner_alias_map, inner_single, ctes, target_col_id, graph, seen
                     )

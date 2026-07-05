@@ -91,14 +91,37 @@ Desktop.
 | `file_type` | `"auto"` | `"auto"`, `"sql"`, or `"xml"`. |
 | `direction` | `"source_to_target"` | or `"target_to_source"`. |
 | `detail_level` | `"table"` | `"table"` collapses to physical table-to-table lineage; `"full"` keeps column/component-level detail. |
-| `output_formats` | all | subset of `["graph", "mermaid", "report"]`. |
+| `output_formats` | all | subset of `["graph", "mermaid", "report", "excel"]`. |
 | `dialect` | `"tsql"` | sqlglot dialect (`snowflake`, `postgres`, `bigquery`, `mysql`, ...). |
 | `xml_format` | `"auto"` | `"auto"`, `"ssis"`, `"informatica"`, or `"generic"`. |
+| `excel_path` | - | Where to write the `.xlsx` when `"excel"` is requested. Defaults to `<file_path stem>_lineage.xlsx` next to the input file; required if only `content` was given. |
 
 Returns `source_type`, `format_detected`, `direction`, `detail_level`,
 `errors` (non-fatal parse issues - e.g. one bad statement in an otherwise
 valid SQL file), and any requested `graph` (JSON nodes/edges), `mermaid`
-(flowchart text), `report` (markdown table + summary).
+(flowchart text), `report` (markdown table + summary), `excel_path` (path to
+the written workbook).
+
+### Excel (STTM) output
+
+`excel` produces a clean source-to-target mapping workbook with up to two
+sheets, always collapsed past any intermediate CTE/transformation-instance
+hops regardless of `detail_level`:
+
+- **Table Lineage** - one row per physical source table -> target table.
+- **Column Lineage** - one row per physical source column -> target column
+  (added only when the parser produced column-level detail - SQL and
+  Informatica do; SSIS is component-level only, so it won't have this sheet).
+
+`direction` controls which side is presented in the leftmost columns
+(`source_to_target` puts Source first; `target_to_source` puts Target
+first) - the values themselves are always the true physical source/target,
+never swapped.
+
+From the CLI:
+```bash
+lineage-cli path\to\file.sql --format excel --output C:\reports\mapping.xlsx
+```
 
 ### `list_supported_formats`
 
@@ -108,9 +131,10 @@ Returns the SQL dialects/statement types and XML formats currently supported.
 
 ```
 src/lineage_mcp/
-  graph.py           # LineageGraph: nodes/edges, direction flip, collapse-to-table
+  graph.py           # LineageGraph: nodes/edges, direction flip, collapse-to-boundary
   analyzer.py         # file-type detection + orchestration
   render.py           # Mermaid + markdown report rendering
+  excel.py            # clean source-to-target mapping (.xlsx) rendering
   sql/parser.py        # sqlglot-based SQL lineage extraction
   xml/
     detect.py          # SSIS vs Informatica vs generic sniffing
